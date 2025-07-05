@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ぽちぽちするだけでグラフが作れる</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.0/math.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+
+        h1 {
+            color: #4CAF50;
+            margin-top: 20px;
+            font-size: 2.5rem;
+        }
+
+        section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: block;
+            color: #4CAF50;
+        }
+        input[type="color"] {
+            width: 10%; /* 自動で幅を調整 */
+            padding: 0;  /* 不要なパディングを取り除く */
+            border: none; /* ボーダーをなくす */
+            background-color: transparent; /* 背景を透明に */
+        }
+        input, select, button {
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-bottom: 16px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus, button:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+
+        button:hover:enabled {
+            background-color: #45a049;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            resize: none;
+        }
+
+        @media (max-width: 768px) {
+            section {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            button {
+                padding: 10px;
+            }
+        }
+        #copy-message {
+          margin-bottom: 20px; /* メッセージの上に余白を追加 */
+          font-weight: bold;
+          color: green; /* メッセージの色 */
+          text-align: center;
+      }
+      .indent {
+          padding-left: 20px; /* 左に20pxの余白を追加 */
+      }
+    </style>
+</head>
+<body>
+    <h1>ぽちぽちするだけでグラフが作れる</h1>
+    <section>
+        <label for="csv-input"  title="スプレッドシートなら右上にあるファイル→ダウンロードからCSVファイルをダウンロードできます。">CSVファイルをアップロード:</label>
+        <input type="file" id="csv-input" accept=".csv" title="スプレッドシートなら右上にあるファイル→ダウンロードからCSVファイルをダウンロードできます。">
+
+        <label for="x-select" title="X軸(横)としたい列を選んでください。制御して変化させたデータ（時間など）を書くのが普通です。簡単にいうと「入力」です。">X軸の列を選択:</label>
+        <select id="x-select" title="X軸(横)としたい列を選んでください。制御して変化させたデータ（時間など）を書くのが普通です。簡単にいうと「入力」です。" disabled>
+            <option value="">CSVをアップロードしてください</option>
+        </select>
+
+        <label for="y-select" title="Y軸(縦)としたい列を選んでください。制御していないのに変化したデータ（温度など）を書くのが普通です。簡単にいうと「出力」です。">Y軸の列を選択:</label>
+        <select id="y-select" title="Y軸(縦)としたい列を選んでください。制御していないのに変化したデータ（温度など）を書くのが普通です。簡単にいうと「出力」です。" disabled>
+            <option value="">CSVをアップロードしてください</option>
+        </select>
+
+        <label for="x-axis-name" title="X軸の名前を入力してください。グラフに表示されます。">X軸の名前:</label>
+        <input type="text" id="x-axis-name" placeholder="例: 時間[min]" title="X軸の名前を入力してください。グラフに表示されます。" disabled>
+  
+
+        <label for="y-axis-name" title="Y軸の名前を入力してください。グラフに表示されます。">Y軸の名前:</label>
+        <input type="text" id="y-axis-name" placeholder="例: 温度[℃]" title="Y軸の名前を入力してください。グラフに表示されます。" disabled>
+
+        <label for="graph-title" title="グラフの名前を入力してください。グラフに表示されます。">グラフのタイトル:</label>
+        <input type="text" id="graph-title" placeholder="例: 吸熱反応の時間と温度の関係" title="グラフの名前を入力してください。グラフに表示されます。" disabled>
+<details class="indent">
+<summary>詳細な設定（クリックで開/閉）</summary>
+        <p>注意:間違った設定をすると、グラフが描画されないことがあります。</p>
+        <label for="show-import-settings">インポート設定:</label>
+        <select id="show-import-settings" disabled>
+          <option value="show">表示する</option>
+          <option value="hide">表示しない</option>
+        </select>
+        <label for="x-range">X軸の範囲:</label>
+        <input type="text" id="x-range" placeholder="例: 1-100" disabled>
+        <label for="y-range">Y軸の範囲:</label>
+        <input type="text" id="y-range" placeholder="例: 1-100" disabled>
+        <label for="trendline">トレンドラインの種類:</label>
+        <select id="trendline" disabled>
+            <option value="none">なし</option>
+            <option value="linear">線形(比例するようなデータ)</option>
+            <option value="quadratic">2次(2乗に比例するようなデータ)</option>
+            <option value="logarithmic">対数(対数に比例するようなデータ)</option>
+        </select>
+
+        <label for="graph-xsize">グラフの横(X軸)の大きさ:</label>
+        <input type="text" id="graph-xsize" placeholder="例: 16" disabled>
+
+        <label for="graph-ysize">グラフの縦(Y軸)の大きさ:</label>
+        <input type="text" id="graph-ysize" placeholder="例: 9" disabled>
+        <label for="hanrei-settings">凡例の設定:</label>
+        <select id="hanrei-settings" disabled>
+          <option value="show">表示する</option>
+          <option value="hide">表示しない</option>
+        </select>
+        <label for="marker-color">マーカーの色:</label>
+        <input type="color" id="marker-color" value="#1f77b4" disabled>
+        <label for="trendline-color">トレンドラインの色:</label>
+        <input type="color" id="trendline-color" value="#d62728" disabled>
+        <label for="marker-size">マーカーのサイズ:</label>
+        <input type="text" id="marker-size" value="20" disabled>
+        <label for="font-size-t">フォントサイズ（タイトル）:</label>
+        <input type="text" id="font-size-t" value="12" disabled>
+        <label for="font-size-x">フォントサイズ（X軸・X軸のラベル）:</label>
+        <input type="text" id="font-size-x" value="10" disabled>
+        <label for="font-size-y">フォントサイズ（Y軸・Y軸のラベル）:</label>
+        <input type="text" id="font-size-y" value="10" disabled>
+        <label for="font-size-xm">フォントサイズ（X軸の目盛り）:</label>
+        <input type="text" id="font-size-xm" value="10" disabled>
+        <label for="font-size-ym">フォントサイズ（Y軸の目盛り）:</label>
+        <input type="text" id="font-size-ym" value="10" disabled>
+</details><br>
+        <button id="generate-btn" disabled>Pythonのコードを生成する</button>
+        <h3>Pythonのコード(Colaboratory専用):</h3>
+        <div id="copy-message" style="display: none; margin-bottom: 10px; color: green;">コピーしました！</div><button id="copy-button">コピー</button>
+        <pre><code id="python-code" class="language-python">
+# Pythonコードはここに表示されます
+        </code></pre>
+      
+    </section>
+
+    <script>
+        document.getElementById('csv-input').addEventListener('change', handleFileUpload);
+        document.getElementById('generate-btn').addEventListener('click', generatePythonCode);
+
+        let csvData = [];
+        let pythonCode =`# Pythonコードはここに表示されます`
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                const lines = reader.result.split('\n').filter(line => line.trim());
+                csvData = lines.map(line => line.split(',').map(cell => cell.trim()));
+
+                populateColumnSelects(csvData[0]);
+            };
+            reader.readAsText(file);
+        }
+
+        function populateColumnSelects(headers) {
+            const xSelect = document.getElementById('x-select');
+            const ySelect = document.getElementById('y-select');
+
+            xSelect.innerHTML = '';
+            ySelect.innerHTML = '';
+
+            headers.forEach((header, index) => {
+                const optionX = document.createElement('option');
+                optionX.value = index;
+                optionX.textContent = header;
+
+                const optionY = optionX.cloneNode(true);
+
+                xSelect.appendChild(optionX);
+                ySelect.appendChild(optionY);
+            });
+
+            xSelect.disabled = false;
+            ySelect.disabled = false;
+            document.getElementById('x-range').disabled = false;
+            document.getElementById('y-range').disabled = false;
+            document.getElementById('x-axis-name').disabled = false;
+            document.getElementById('y-axis-name').disabled = false;
+            document.getElementById('graph-title').disabled = false;
+            document.getElementById('generate-btn').disabled = false;
+            document.getElementById('graph-xsize').disabled = false;
+            document.getElementById('graph-ysize').disabled = false;
+            document.getElementById('marker-size').disabled = false;
+            document.getElementById('trendline-color').disabled = false;
+            document.getElementById('marker-color').disabled = false;
+            document.getElementById('font-size-t').disabled = false;
+            document.getElementById('font-size-x').disabled = false;
+            document.getElementById('font-size-y').disabled = false;
+            document.getElementById('font-size-xm').disabled = false;
+            document.getElementById('font-size-ym').disabled = false;
+            document.getElementById('trendline').disabled = false;
+            document.getElementById('hanrei-settings').disabled = false;
+            document.getElementById('show-import-settings').disabled = false;
+        }
+
+function generatePythonCode() {
+        let xRangeInput = document.getElementById('x-range').value;
+        let yRangeInput = document.getElementById('y-range').value;
+        let trendlineType = document.getElementById('trendline').value;
+        let sizeX = document.getElementById('graph-xsize').value;
+        let sizeY = document.getElementById('graph-ysize').value;
+        let importSetting = document.getElementById('show-import-settings').value;
+        let hanrei = document.getElementById('hanrei-settings').value;
+        let markerC = document.getElementById('marker-color').value||"#1f77b4";
+        let markerT = document.getElementById('trendline-color').value||"#d62728";
+        let markerSize = document.getElementById('marker-size').value||20;
+
+        let sizeTitle = document.getElementById('font-size-t').value||12;
+        let fontsizeX = document.getElementById('font-size-x').value||10;
+        let fontsizeY = document.getElementById('font-size-y').value||10;
+        let fontsizemX = document.getElementById('font-size-xm').value||10;
+        let fontsizemY = document.getElementById('font-size-ym').value||10;
+
+        let xAxisName = document.getElementById('x-axis-name').value || '名称未設定(X軸)';
+        let yAxisName = document.getElementById('y-axis-name').value || '名称未設定(Y軸)';
+        let graphTitle = document.getElementById('graph-title').value || '名称未設定なグラフ';
+
+        const xIndex = document.getElementById('x-select').value;
+        const yIndex = document.getElementById('y-select').value;
+    if (!xIndex || !yIndex) {
+        alert('X軸とY軸の列を選択してください');
+        return;
+    }
+
+    // xData と yData の収集
+    const xData = [];
+    const yData = [];
+
+    for (let i = 1; i < csvData.length; i++) {
+        const xValue = parseFloat(csvData[i][xIndex]);
+        const yValue = parseFloat(csvData[i][yIndex]);
+
+        // 範囲外のデータも含めて追加
+        xData.push(xValue);
+        yData.push(yValue);
+    }
+
+    if (xData.length === 0 || yData.length === 0) {
+        alert('選択した範囲に有効な数値データがありません');
+        return;
+    }
+    pythonCode = ``
+    if (importSetting!=="hide"){
+    pythonCode += `!pip install japanize-matplotlib
+import japanize_matplotlib  # 日本語を表示するライブラリ
+import matplotlib.pyplot as plt
+import numpy as np
+# この上4行は2回目以降の実行では不要(再読み込み後は再び実行する必要がある)
+
+`;
+}
+    pythonCode += `# グラフのデータ
+x_data = ${JSON.stringify(xData)}
+y_data = ${JSON.stringify(yData)}
+
+# 散布図の作成
+plt.scatter(x_data, y_data,color='${markerC}',s=${markerSize})
+`
+if ((sizeX && !sizeY) || (!sizeX && sizeY)) {
+    alert("グラフの大きさは縦と横の両方を定義する必要があります。（出力されるコードには大きさの設定は含まれていません）")
+}else if(sizeX){
+  pythonCode+=`
+#グラフのサイズを決める
+plt.figure(figsize=(${sizeX}, ${sizeY}))
+`
+}
+    // トレンドラインの処理（選択されている場合）
+    pythonCode += generatePythonTrendlineCode(trendlineType, xData, yData);
+
+    // 範囲が指定されていれば、その範囲を設定
+    if (xRangeInput) {
+        const [xMin, xMax] = parseRange(xRangeInput);
+        if (xMin !== null && xMax !== null) {
+pythonCode += `
+# X軸の範囲設定
+plt.xlim(${xMin}, ${xMax})
+        `;
+        }
+    }
+
+    if (yRangeInput) {
+        const [yMin, yMax] = parseRange(yRangeInput);
+        if (yMin !== null && yMax !== null) {
+            pythonCode += `
+# Y軸の範囲設定
+plt.ylim(${yMin}, ${yMax})
+            `;
+        }
+    }
+if (hanrei=="hide"){
+  pythonCode += `
+#凡例を非表示にする
+plt.legend().set_visible(False)
+`
+}
+    pythonCode += `
+plt.xticks(fontsize=${fontsizemX})
+plt.yticks(fontsize=${fontsizemY})
+plt.xlabel("${xAxisName}",fontsize=${fontsizeX})
+plt.ylabel("${yAxisName}",fontsize=${fontsizeY})
+plt.title("${graphTitle}",fontsize=${sizeTitle})
+plt.show()`;
+
+    document.getElementById('python-code').textContent = pythonCode;
+    Prism.highlightAll();
+}
+
+// 範囲を処理する関数（例: "10-20" -> [10, 20]）
+function parseRange(rangeInput) {
+    const rangeParts = rangeInput.split('-');
+    if (rangeParts.length === 2) {
+        const start = parseFloat(rangeParts[0]);
+        const end = parseFloat(rangeParts[1]);
+        if (!isNaN(start) && !isNaN(end)) {
+            return [start, end];
+        }
+    }
+    return [null, null];  // 範囲が正しくない場合（エラーチェック}
+}
+      
+function generatePythonTrendlineCode(trendlineType, xData, yData) {
+    let markerT = document.getElementById('trendline-color').value||"#d62728";
+    if (trendlineType === 'linear') {
+        return `
+# 一次関数のフィット
+coefficients = np.polyfit(x_data, y_data, 1)
+polynomial = np.poly1d(coefficients)
+# X軸の範囲を設定
+x_range = np.linspace(min(x_data), max(x_data), 500)
+# フィッティングされた曲線を計算
+fitted_curve = polynomial(x_range)
+plt.plot(x_range, fitted_curve, color='${markerT}', label='トレンドライン');
+plt.legend();
+        `;
+    } else if (trendlineType === 'quadratic') {
+        return `
+# 二次関数のフィット
+coefficients = np.polyfit(x_data, y_data, 2)
+polynomial = np.poly1d(coefficients)
+# X軸の範囲を設定
+x_range = np.linspace(min(x_data), max(x_data), 500)
+# フィッティングされた曲線を計算
+fitted_curve = polynomial(x_range)
+plt.plot(x_range, fitted_curve, color='${markerT}', label='トレンドライン');
+plt.legend();
+        `;
+    } else if (trendlineType === 'logarithmic') {
+        return `
+# データに対してlogを取る
+log_x_data = np.log(x_data)
+
+# 対数変換されたデータに基づいてフィッティング
+coefficients_log = np.polyfit(log_x_data, y_data, 1)
+polynomial_log = np.poly1d(coefficients_log)
+# X軸の範囲を設定
+x_range = np.linspace(min(x_data), max(x_data), 500)
+# フィッティングされた曲線を計算（対数変換されたデータで計算）
+log_x_range = np.log(x_range)
+fitted_curve_log = polynomial_log(log_x_range)
+
+plt.plot(x_range, fitted_curve_log, color='${markerT}', label='トレンドライン');
+plt.legend();
+        `;
+    }
+    return '';
+}
+// クリップボードにコピーする関数
+function copyToClipboard() {
+    // 一時的なtextareaを作成
+    var textArea = document.createElement('textarea');
+    textArea.value = pythonCode; // pythonCodeの内容を設定
+    document.body.appendChild(textArea);
+    
+    // テキストエリアの内容を選択してコピー
+    textArea.select();
+    document.execCommand('copy');
+    
+    // 作成したtextareaを削除
+    document.body.removeChild(textArea);
+    
+    // コピー完了メッセージを表示
+    var message = document.getElementById('copy-message');
+    message.style.display = 'block';  // メッセージを表示
+    
+    // 3秒後にメッセージを非表示にする
+    setTimeout(function() {
+        message.style.display = 'none';
+    }, 3000);
+}
+
+// ボタンがクリックされたときにコピーを実行
+document.getElementById('copy-button').addEventListener('click', copyToClipboard);
+  </script>
+</body>
+</html>
