@@ -120,6 +120,12 @@
 <body>
     <h1>ぽちぽちするだけでグラフが作れる</h1>
     <section>
+<div style="margin-bottom: 10px;">
+    <label for="settings-search" style="color: #2e7d32;">🔍 設定項目を検索:</label>
+    <input type="text" id="settings-search" placeholder="例: マーカー, サイズ, フォント..." 
+           style="border: 2px solid #4CAF50;" oninput="filterSettings()">
+</div>
+        <p>注意:!がついているものは間違った設定をすると、グラフが描画されないことがあります。</p>
         <label for="csv-input"  title="スプレッドシートなら右上にあるファイル→ダウンロードからCSVファイルをダウンロードできます。">CSVファイルをアップロード:</label>
         <input type="file" id="csv-input" accept=".csv" title="スプレッドシートなら右上にあるファイル→ダウンロードからCSVファイルをダウンロードできます。">
 
@@ -144,8 +150,7 @@
         <input type="text" id="graph-title" placeholder="例: 吸熱反応の時間と温度の関係" title="グラフの名前を入力してください。グラフに表示されます。" disabled>
 <details class="indent">
 <summary>詳細な設定（クリックで開/閉）</summary>
-        <p>注意:間違った設定をすると、グラフが描画されないことがあります。</p>
-        <label for="show-import-settings">インポート設定:</label>
+        <label for="show-import-settings">!インポート設定:</label>
         <select id="show-import-settings" disabled>
           <option value="show">表示する</option>
           <option value="hide">表示しない</option>
@@ -197,7 +202,16 @@
         </code></pre>
       
     </section>
-
+<hr style="margin-top: 40px; border: 0; border-top: 1px solid #eee;">
+<footer style="text-align: center; color: #666; font-size: 0.8em; margin-bottom: 20px;">
+    <p>© 2025 kouryou-118103 (kouryou118103)</p>
+    <p>
+        Licensed under 
+        <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.ja" target="_blank" style="color: #2e7d32; text-decoration: none; font-weight: bold;">
+            CC BY-NC-SA 4.0
+        </a>
+    </p>
+</footer>
     <script>
         document.getElementById('csv-input').addEventListener('change', handleFileUpload);
         document.getElementById('generate-btn').addEventListener('click', generatePythonCode);
@@ -457,6 +471,62 @@ function copyToClipboard() {
 
 // ボタンがクリックされたときにコピーを実行
 document.getElementById('copy-button').addEventListener('click', copyToClipboard);
-  </script>
+
+function filterSettings() {
+    let rawQuery = document.getElementById('settings-search').value;
+
+    // ひらがなをカタカナに変換する関数
+    const hiraToKana = (str) => {
+        return str.replace(/[ぁ-ん]/g, (s) => {
+            return String.fromCharCode(s.charCodeAt(0) + 0x60);
+        });
+    };
+
+    const query = rawQuery.toLowerCase();
+    const kanaQuery = hiraToKana(rawQuery).toLowerCase();
+
+    const allLabels = document.querySelectorAll('label');
+    const detailsElement = document.querySelector('details.indent');
+    const summaryElement = detailsElement.querySelector('summary');
+    const isSearching = query.length > 0;
+
+    if (isSearching) {
+        if (summaryElement) summaryElement.style.display = "none"; 
+        if (detailsElement) {
+            detailsElement.open = true;
+            detailsElement.style.paddingLeft = "0";
+            detailsElement.style.border = "none";
+        }
+    } else {
+        if (summaryElement) summaryElement.style.display = ""; 
+        if (detailsElement) {
+            detailsElement.open = false;
+            detailsElement.style.paddingLeft = "";
+            detailsElement.style.border = "";
+        }
+    }
+
+    allLabels.forEach(label => {
+        // 検索窓自体のラベルは無視
+        if (label.getAttribute('for') === 'settings-search') return;
+
+        const targetId = label.getAttribute('for');
+        const inputElement = document.getElementById(targetId);
+        const labelText = label.textContent.toLowerCase();
+
+        if (labelText.includes(query) || labelText.includes(kanaQuery)) {
+            label.style.display = "block";
+            if (inputElement) {
+                inputElement.style.display = "block";
+                inputElement.style.marginBottom = "8px"; // 少し余白を空ける
+            }
+        } else {
+            label.style.display = "none";
+            if (inputElement) inputElement.style.display = "none";
+        }
+    });
+}
+
+    </script>
 </body>
 </html>
